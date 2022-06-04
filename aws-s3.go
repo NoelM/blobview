@@ -110,7 +110,7 @@ func (a *AWSS3Driver) ListObjectsNext(bucket, prefix, token string) (*ObjectList
 }
 
 func convertListBucketOutput(lb *s3.ListBucketsOutput) *ObjectList {
-	var objectList *ObjectList
+	objectList := &ObjectList{}
 
 	for _, bucket := range lb.Buckets {
 		objectList.List = append(objectList.List, Object{
@@ -124,7 +124,7 @@ func convertListBucketOutput(lb *s3.ListBucketsOutput) *ObjectList {
 }
 
 func convertListObjectOutput(lo *s3.ListObjectsV2Output) *ObjectList {
-	var objectList *ObjectList
+	objectList := &ObjectList{}
 
 	for _, dir := range lo.CommonPrefixes {
 		objectList.List = append(objectList.List, Object{

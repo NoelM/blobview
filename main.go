@@ -14,17 +14,10 @@ func main() {
 	}
 	defer termbox.Close()
 
-	driver := NewAWSS3Driver()
-	if err := driver.Start(); err != nil {
-		log.Fatalln(err)
+	view := NewObjectListView()
+	if err := view.Start(); err != nil {
+		log.Fatalln(fmt.Sprintf("Unable to start view: %s", err.Error()))
 	}
-
-	buckets, err := driver.ListBuckets()
-	if err != nil {
-		log.Fatalln(fmt.Sprintf("Unable to list buckets: %s", err.Error()))
-	}
-	view := NewView()
-	view.PrintObjectList(buckets)
 
 	eventQueue := make(chan termbox.Event)
 	go func() {
@@ -35,12 +28,12 @@ func main() {
 
 	for {
 		ev := <-eventQueue
-		switch ev.Key {
-		case termbox.KeyArrowUp:
+		switch {
+		case ev.Key == termbox.KeyArrowUp:
 			view.Up()
-		case termbox.KeyArrowDown:
+		case ev.Key == termbox.KeyArrowDown:
 			view.Down()
-		case 'q':
+		case ev.Key == termbox.KeyEsc:
 			os.Exit(0)
 		}
 	}

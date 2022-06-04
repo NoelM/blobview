@@ -4,54 +4,41 @@ import (
 	"github.com/nsf/termbox-go"
 )
 
-const ScreenSize = 50
-const ScreenWidth = 80
+type ObjectListView struct {
+	cursor        Cursor
+	width, height int
 
-type Cursor struct {
-	x, y int
+	client     Storage
+	bucket     string
+	prefix     string
+	objectList *ObjectList
 }
 
-func (c *Cursor) isTop() bool {
-	return c.y == 0
-}
-
-func (c *Cursor) isBottom() bool {
-	return c.y == ScreenSize
-}
-
-func (c *Cursor) Up() {
-	if c.isTop() {
-		return
-	}
-	c.y--
-}
-
-func (c *Cursor) Down() {
-	if c.isBottom() {
-		return
-	}
-	c.y++
-}
-
-func (c *Cursor) Reset() {
-	c.x, c.y = 0, 0
-}
-
-type View struct {
-	cursor Cursor
-	bucket string
-	path   string
-}
-
-func NewView() *View {
-
-	return &View{
-		cursor: Cursor{0, 0},
+func NewObjectListView() *ObjectListView {
+	return &ObjectListView{
+		cursor: Cursor{},
+		client: NewStorage(AWS),
 	}
 }
 
-func (v *View) PrintObjectList(objects []Object) {
-	for _, obj := range objects {
+func (v *ObjectListView) Start() (err error) {
+	v.width, v.height = termbox.Size()
+
+	if err = v.client.Start(); err != nil {
+		return err
+	}
+
+	v.objectList, err = v.client.ListBuckets()
+	if err != nil {
+		return err
+	}
+
+	v.printObjectList()
+	return nil
+}
+
+func (v *ObjectListView) printObjectList() {
+	for _, obj := range v.objectList.List {
 		v.PrintObject(obj)
 	}
 	v.cursor.Reset()
@@ -59,7 +46,7 @@ func (v *View) PrintObjectList(objects []Object) {
 	termbox.Flush()
 }
 
-func (v *View) PrintObject(obj Object) {
+func (v *ObjectListView) PrintObject(obj Object) {
 	switch obj.Type {
 	case BucketType:
 		v.printBucketLine(obj)
@@ -71,35 +58,35 @@ func (v *View) PrintObject(obj Object) {
 	v.cursor.Down()
 }
 
-func (v *View) printBucketLine(obj Object) {
+func (v *ObjectListView) printBucketLine(obj Object) {
 	TBPrintMsg(v.cursor.x, v.cursor.y, termbox.ColorWhite, termbox.ColorDefault, "\U0001FAA3")
-	TBPrintMsg(v.cursor.x+3, v.cursor.y, termbox.ColorWhite, termbox.ColorDefault, obj.Name)
+	TBPrintMsg(v.cursor.x+3, v.cursor.y, termbox.ColorWhite, termbox.ColorDefault, obj.Key)
 }
 
-func (v *View) printDirectoryLine(obj Object) {
+func (v *ObjectListView) printDirectoryLine(obj Object) {
 	TBPrintMsg(v.cursor.x, v.cursor.y, termbox.ColorWhite, termbox.ColorDefault, "\U0001FC41")
-	TBPrintMsg(v.cursor.x+3, v.cursor.y, termbox.ColorWhite, termbox.ColorDefault, obj.Name)
+	TBPrintMsg(v.cursor.x+3, v.cursor.y, termbox.ColorWhite, termbox.ColorDefault, obj.Key)
 }
 
-func (v *View) printFileLine(obj Object) {
-	TBPrintMsg(v.cursor.x, v.cursor.y, termbox.ColorWhite, termbox.ColorDefault, obj.Name)
+func (v *ObjectListView) printFileLine(obj Object) {
+	TBPrintMsg(v.cursor.x, v.cursor.y, termbox.ColorWhite, termbox.ColorDefault, obj.Key)
 }
 
-func (v *View) setActiveLine() {
-	for i := 0; i < ScreenWidth; i++ {
+func (v *ObjectListView) setActiveLine() {
+	for i := 0; i < v.width; i++ {
 		termbox.SetBg(v.cursor.x+i, v.cursor.y, termbox.ColorWhite)
 		termbox.SetFg(v.cursor.x+i, v.cursor.y, termbox.ColorBlack)
 	}
 }
 
-func (v *View) setDefaultLine() {
-	for i := 0; i < ScreenWidth; i++ {
+func (v *ObjectListView) setDefaultLine() {
+	for i := 0; i < v.width; i++ {
 		termbox.SetBg(v.cursor.x+i, v.cursor.y, termbox.ColorDefault)
 		termbox.SetFg(v.cursor.x+i, v.cursor.y, termbox.ColorWhite)
 	}
 }
 
-func (v *View) Up() {
+func (v *ObjectListView) Up() {
 	if v.cursor.isTop() {
 		return
 	}
@@ -109,7 +96,7 @@ func (v *View) Up() {
 	termbox.Flush()
 }
 
-func (v *View) Down() {
+func (v *ObjectListView) Down() {
 	if v.cursor.isBottom() {
 		return
 	}
