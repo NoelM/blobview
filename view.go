@@ -2,7 +2,6 @@ package main
 
 import (
 	"github.com/nsf/termbox-go"
-	"time"
 )
 
 const ScreenSize = 50
@@ -49,21 +48,6 @@ func NewView() *View {
 	return &View{
 		cursor: Cursor{0, 0},
 	}
-}
-
-type ObjectType int
-
-const (
-	BucketType ObjectType = iota
-	DirectoryType
-	FileType
-)
-
-type Object struct {
-	Name  string
-	Type  ObjectType
-	Bytes int64
-	Date  time.Time
 }
 
 func (v *View) PrintObjectList(objects []Object) {
