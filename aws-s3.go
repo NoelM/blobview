@@ -30,7 +30,7 @@ func (a *AWSS3Driver) Start() error {
 	return nil
 }
 
-func (a *AWSS3Driver) ListBuckets() (*s3.ListBucketsOutput, error) {
+func (a *AWSS3Driver) listBucketsInternal() (*s3.ListBucketsOutput, error) {
 	resp, err := a.client.ListBuckets(context.TODO(), &s3.ListBucketsInput{})
 
 	if err != nil {
@@ -40,7 +40,25 @@ func (a *AWSS3Driver) ListBuckets() (*s3.ListBucketsOutput, error) {
 	return resp, nil
 }
 
-func (a *AWSS3Driver) ListObjects(bucket string, prefix string) (*s3.ListObjectsV2Output, error) {
+func (a *AWSS3Driver) ListBuckets() ([]Object, error) {
+	raw, err := a.listBucketsInternal()
+	if err != nil {
+		return nil, err
+	}
+
+	var objects []Object
+	for _, bucket := range raw.Buckets {
+		objects = append(objects, Object{
+			Name:   *bucket.Name,
+			Date:   *bucket.CreationDate,
+			Bucket: true,
+		})
+	}
+
+	return objects, nil
+}
+
+func (a *AWSS3Driver) listObjectsInternal(bucket, prefix string) (*s3.ListObjectsV2Output, error) {
 	objectInput := &s3.ListObjectsV2Input{
 		Bucket:    aws.String(bucket),
 		MaxKeys:   50,
@@ -53,4 +71,28 @@ func (a *AWSS3Driver) ListObjects(bucket string, prefix string) (*s3.ListObjects
 		return nil, err
 	}
 	return list, nil
+}
+
+func (a *AWSS3Driver) ListObjects(bucket, prefix string) ([]Object, error) {
+	raw, err := a.listObjectsInternal(bucket, prefix)
+	if err != nil {
+		return nil, err
+	}
+
+	var objects []Object
+	for _, dir := range raw.CommonPrefixes {
+		objects = append(objects, Object{
+			Name:      *dir.Prefix,
+			Directory: true,
+		})
+	}
+	for _, obj := range raw.Contents {
+		objects = append(objects, Object{
+			Name:  *obj.Key,
+			Date:  *obj.LastModified,
+			Bytes: obj.Size,
+		})
+	}
+
+	return objects, nil
 }

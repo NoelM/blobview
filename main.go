@@ -2,11 +2,17 @@ package main
 
 import (
 	"fmt"
+	"github.com/nsf/termbox-go"
 	"log"
-	"time"
 )
 
 func main() {
+	err := termbox.Init()
+	if err != nil {
+		log.Fatalln(fmt.Sprintf("Unable to init termbox: %s", err.Error()))
+	}
+	defer termbox.Close()
+
 	driver := NewAWSS3Driver()
 	if err := driver.Start(); err != nil {
 		log.Fatalln(err)
@@ -17,16 +23,8 @@ func main() {
 		log.Fatalln(fmt.Sprintf("Unable to list buckets: %s", err.Error()))
 	}
 
-	for _, buck := range buckets.Buckets {
-		println(*buck.Name, buck.CreationDate.Format(time.RFC1123Z))
-	}
+	view := NewView()
+	view.PrintObjectList(buckets)
 
-	objects, err := driver.ListObjects(*buckets.Buckets[0].Name, "")
-	if err != nil {
-		log.Fatalln(fmt.Sprintf("Unable to list objects: %s", err.Error()))
-	}
-
-	for _, obj := range objects.CommonPrefixes {
-		println(*obj.Prefix)
-	}
+	termbox.PollEvent()
 }
