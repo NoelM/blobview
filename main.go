@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"github.com/nsf/termbox-go"
 	"log"
+	"os"
 )
 
 func main() {
@@ -22,9 +23,25 @@ func main() {
 	if err != nil {
 		log.Fatalln(fmt.Sprintf("Unable to list buckets: %s", err.Error()))
 	}
-
 	view := NewView()
 	view.PrintObjectList(buckets)
 
-	termbox.PollEvent()
+	eventQueue := make(chan termbox.Event)
+	go func() {
+		for {
+			eventQueue <- termbox.PollEvent()
+		}
+	}()
+
+	for {
+		ev := <-eventQueue
+		switch ev.Key {
+		case termbox.KeyArrowUp:
+			view.Up()
+		case termbox.KeyArrowDown:
+			view.Down()
+		case 'q':
+			os.Exit(0)
+		}
+	}
 }

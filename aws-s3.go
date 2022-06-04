@@ -49,9 +49,9 @@ func (a *AWSS3Driver) ListBuckets() ([]Object, error) {
 	var objects []Object
 	for _, bucket := range raw.Buckets {
 		objects = append(objects, Object{
-			Name:   *bucket.Name,
-			Date:   *bucket.CreationDate,
-			Bucket: true,
+			Name: *bucket.Name,
+			Date: *bucket.CreationDate,
+			Type: BucketType,
 		})
 	}
 
@@ -82,8 +82,8 @@ func (a *AWSS3Driver) ListObjects(bucket, prefix string) ([]Object, error) {
 	var objects []Object
 	for _, dir := range raw.CommonPrefixes {
 		objects = append(objects, Object{
-			Name:      *dir.Prefix,
-			Directory: true,
+			Name: *dir.Prefix,
+			Type: DirectoryType,
 		})
 	}
 	for _, obj := range raw.Contents {
@@ -91,6 +91,7 @@ func (a *AWSS3Driver) ListObjects(bucket, prefix string) ([]Object, error) {
 			Name:  *obj.Key,
 			Date:  *obj.LastModified,
 			Bytes: obj.Size,
+			Type:  FileType,
 		})
 	}
 
