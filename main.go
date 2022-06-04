@@ -33,7 +33,11 @@ func main() {
 			view.Up()
 		case ev.Key == termbox.KeyArrowDown:
 			view.Down()
+		case ev.Key == termbox.KeyEnter:
+			view.Dive()
 		case ev.Key == termbox.KeyEsc:
+			termbox.SetCursor(0, 0)
+			termbox.Clear(termbox.ColorDefault, termbox.ColorDefault)
 			os.Exit(0)
 		}
 	}

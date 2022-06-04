@@ -74,7 +74,9 @@ func (a *AWSS3Driver) ListObjects(bucket, prefix string) (*ObjectList, error) {
 	objectList := convertListObjectOutput(raw)
 	objectList.Bucket = bucket
 	objectList.Prefix = prefix
-	objectList.Token = *raw.ContinuationToken
+	if raw.ContinuationToken != nil {
+		objectList.Token = *raw.ContinuationToken
+	}
 
 	return objectList, nil
 }
