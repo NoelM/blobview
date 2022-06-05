@@ -5,6 +5,7 @@ import (
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
+	"strings"
 )
 
 type AWSS3Driver struct {
@@ -116,9 +117,10 @@ func convertListBucketOutput(lb *s3.ListBucketsOutput) *ObjectList {
 
 	for _, bucket := range lb.Buckets {
 		objectList.List = append(objectList.List, Object{
-			Key:  *bucket.Name,
-			Date: *bucket.CreationDate,
-			Type: BucketType,
+			Key:      *bucket.Name,
+			PrintKey: *bucket.Name,
+			Date:     *bucket.CreationDate,
+			Type:     BucketType,
 		})
 	}
 
@@ -129,17 +131,31 @@ func convertListObjectOutput(lo *s3.ListObjectsV2Output) *ObjectList {
 	objectList := &ObjectList{}
 
 	for _, dir := range lo.CommonPrefixes {
+		prefixList := strings.Split(*dir.Prefix, "/")
+		var printKey string
+		if len(prefixList) >= 2 {
+			printKey = prefixList[len(prefixList)-2]
+		}
+
 		objectList.List = append(objectList.List, Object{
-			Key:  *dir.Prefix,
-			Type: DirectoryType,
+			Key:      *dir.Prefix,
+			PrintKey: printKey,
+			Type:     DirectoryType,
 		})
 	}
 	for _, obj := range lo.Contents {
+		prefixList := strings.Split(*obj.Key, "/")
+		var printKey string
+		if len(prefixList) >= 1 {
+			printKey = prefixList[len(prefixList)-1]
+		}
+
 		objectList.List = append(objectList.List, Object{
-			Key:   *obj.Key,
-			Date:  *obj.LastModified,
-			Bytes: obj.Size,
-			Type:  FileType,
+			Key:      *obj.Key,
+			PrintKey: printKey,
+			Date:     *obj.LastModified,
+			Bytes:    obj.Size,
+			Type:     FileType,
 		})
 	}
 

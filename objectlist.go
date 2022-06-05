@@ -13,10 +13,11 @@ const (
 )
 
 type Object struct {
-	Key   string
-	Type  ObjectType
-	Bytes int64
-	Date  time.Time
+	Key      string
+	PrintKey string
+	Type     ObjectType
+	Bytes    int64
+	Date     time.Time
 }
 
 type ObjectList struct {
@@ -28,15 +29,23 @@ type ObjectList struct {
 	List []Object
 }
 
+func (o *ObjectList) FirstActive() bool {
+	return o.Active == 0
+}
+
 func (o *ObjectList) ActiveUp() {
-	if o.Active == 0 {
+	if o.FirstActive() {
 		return
 	}
 	o.Active--
 }
 
+func (o *ObjectList) LastActive() bool {
+	return o.Active == len(o.List)-1
+}
+
 func (o *ObjectList) ActiveDown() {
-	if o.Active == len(o.List)-1 {
+	if o.LastActive() {
 		return
 	}
 	o.Active++

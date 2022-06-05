@@ -1,57 +1,82 @@
 package main
 
-import "github.com/nsf/termbox-go"
-
 type Cursor struct {
-	x, y          int
-	height, width int
+	x, y             int
+	xOrigin, yOrigin int
+	xSize, ySize     int
 }
 
-func (c *Cursor) isTop() bool {
-	return c.y == 0
-}
-
-func (c *Cursor) isBottom() bool {
-	c.width, c.height = termbox.Size()
-	return c.y == c.height
+func (c *Cursor) IsTop() bool {
+	return c.y == c.yOrigin
 }
 
 func (c *Cursor) Up() {
-	if c.isTop() {
+	if c.IsTop() {
 		return
 	}
 	c.y--
 }
 
+func (c *Cursor) MoveUp(i int) {
+	c.y = IntMax(c.yOrigin, c.y-i)
+}
+
+func (c *Cursor) IsBottom() bool {
+	return c.y == c.yOrigin+c.ySize-1
+}
+
 func (c *Cursor) Down() {
-	if c.isBottom() {
+	c.y++
+}
+
+func (c *Cursor) MoveDown(i int) {
+	c.y = IntMin(c.yOrigin+c.ySize-1, c.y+i)
+}
+
+func (c *Cursor) IsLeft() bool {
+	return c.x == c.xOrigin
+}
+
+func (c *Cursor) Left() {
+	c.x--
+}
+
+func (c *Cursor) MoveLeft(i int) {
+	c.x = IntMax(c.xOrigin, c.x-i)
+}
+
+func (c *Cursor) IsRight() bool {
+	return c.x == c.xOrigin+c.xSize-1
+}
+
+func (c *Cursor) Right() {
+	c.x++
+}
+
+func (c *Cursor) MoveRight(i int) {
+	c.x = IntMin(c.xOrigin+c.xSize-1, c.x+i)
+}
+
+func (c *Cursor) LineOrigin() {
+	c.x = c.xOrigin
+}
+
+func (c *Cursor) NextLine() {
+	c.x = c.xOrigin
+	if c.IsBottom() {
 		return
 	}
 	c.y++
 }
 
-func (c *Cursor) isLeftSide() bool {
-	return c.x == 0
-}
-
-func (c *Cursor) Left() {
-	if c.isLeftSide() {
+func (c *Cursor) PrevLine() {
+	c.x = c.xOrigin
+	if c.IsTop() {
 		return
 	}
-	c.x--
-}
-func (c *Cursor) isRightSide() bool {
-	c.width, c.height = termbox.Size()
-	return c.x == c.width
-}
-
-func (c *Cursor) Right() {
-	if c.isRightSide() {
-		return
-	}
-	c.x++
+	c.y--
 }
 
 func (c *Cursor) Reset() {
-	c.x, c.y = 0, 0
+	c.x, c.y = c.xOrigin, c.yOrigin
 }

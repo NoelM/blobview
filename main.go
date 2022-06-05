@@ -12,7 +12,6 @@ func main() {
 	if err != nil {
 		log.Fatalln(fmt.Sprintf("Unable to init termbox: %s", err.Error()))
 	}
-	defer termbox.Close()
 
 	view := NewObjectListView()
 	if err := view.Start(); err != nil {
@@ -35,9 +34,10 @@ func main() {
 			view.Down()
 		case ev.Key == termbox.KeyEnter:
 			view.Dive()
+		case ev.Key == termbox.KeyBackspace2:
+			view.Back()
 		case ev.Key == termbox.KeyEsc:
-			termbox.SetCursor(0, 0)
-			termbox.Clear(termbox.ColorDefault, termbox.ColorDefault)
+			termbox.Close()
 			os.Exit(0)
 		}
 	}
