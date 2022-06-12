@@ -36,6 +36,8 @@ func main() {
 			view.Dive()
 		case ev.Key == termbox.KeyBackspace2:
 			view.Back()
+		case ev.Ch == 'd':
+			view.Download()
 		case ev.Key == termbox.KeyEsc:
 			termbox.Close()
 			os.Exit(0)

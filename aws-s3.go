@@ -2,9 +2,12 @@ package main
 
 import (
 	"context"
+	"errors"
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
+	"io"
+	"os"
 	"strings"
 )
 
@@ -72,7 +75,7 @@ func (a *AWSS3Driver) ListObjects(bucket, prefix string) (*ObjectList, error) {
 		return nil, err
 	}
 
-	objectList := convertListObjectOutput(raw)
+	objectList := convertListObjectOutput(bucket, raw)
 	objectList.Bucket = bucket
 	objectList.Prefix = prefix
 	if raw.ContinuationToken != nil {
@@ -104,7 +107,7 @@ func (a *AWSS3Driver) ListObjectsNext(bucket, prefix, token string) (*ObjectList
 		return nil, err
 	}
 
-	objectList := convertListObjectOutput(raw)
+	objectList := convertListObjectOutput(bucket, raw)
 	objectList.Bucket = bucket
 	objectList.Prefix = prefix
 	objectList.Token = *raw.ContinuationToken
@@ -117,6 +120,7 @@ func convertListBucketOutput(lb *s3.ListBucketsOutput) *ObjectList {
 
 	for _, bucket := range lb.Buckets {
 		objectList.List = append(objectList.List, Object{
+			Provider: AWS,
 			Key:      *bucket.Name,
 			PrintKey: *bucket.Name,
 			Date:     *bucket.CreationDate,
@@ -127,7 +131,7 @@ func convertListBucketOutput(lb *s3.ListBucketsOutput) *ObjectList {
 	return objectList
 }
 
-func convertListObjectOutput(lo *s3.ListObjectsV2Output) *ObjectList {
+func convertListObjectOutput(bucket string, lo *s3.ListObjectsV2Output) *ObjectList {
 	objectList := &ObjectList{}
 
 	for _, dir := range lo.CommonPrefixes {
@@ -138,6 +142,8 @@ func convertListObjectOutput(lo *s3.ListObjectsV2Output) *ObjectList {
 		}
 
 		objectList.List = append(objectList.List, Object{
+			Provider: AWS,
+			Bucket:   bucket,
 			Key:      *dir.Prefix,
 			PrintKey: printKey,
 			Type:     DirectoryType,
@@ -151,6 +157,8 @@ func convertListObjectOutput(lo *s3.ListObjectsV2Output) *ObjectList {
 		}
 
 		objectList.List = append(objectList.List, Object{
+			Provider: AWS,
+			Bucket:   bucket,
 			Key:      *obj.Key,
 			PrintKey: printKey,
 			Date:     *obj.LastModified,
@@ -160,4 +168,41 @@ func convertListObjectOutput(lo *s3.ListObjectsV2Output) *ObjectList {
 	}
 
 	return objectList
+}
+
+func (a *AWSS3Driver) Download(object Object, destination string) error {
+	output, err := a.client.GetObject(context.TODO(), &s3.GetObjectInput{
+		Bucket: aws.String(object.Bucket),
+		Key:    aws.String(object.Key),
+	})
+	if err != nil {
+		return err
+	}
+
+	file, err := os.Create(destination)
+	if err != nil {
+		return err
+	}
+	defer file.Close()
+	defer output.Body.Close()
+
+	buf := make([]byte, BufferSize)
+	eof := false
+	for !eof {
+		read, readErr := output.Body.Read(buf)
+		if readErr != nil && readErr != io.EOF {
+			return readErr
+		}
+		written, writeErr := file.Write(buf[:read])
+		if writeErr != nil {
+			return writeErr
+		}
+		if written != read {
+			return errors.New("mismatch between read and write len")
+		}
+
+		eof = readErr == io.EOF
+	}
+
+	return nil
 }

@@ -13,6 +13,8 @@ const (
 )
 
 type Object struct {
+	Provider Cloud
+	Bucket   string
 	Key      string
 	PrintKey string
 	Type     ObjectType

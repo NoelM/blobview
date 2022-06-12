@@ -6,6 +6,12 @@ const (
 	AWS Cloud = iota
 )
 
+var Protocol = map[Cloud]string{
+	AWS: "s3",
+}
+
+const BufferSize = 1024 * 1024
+
 type Storage interface {
 	Start() error
 
@@ -13,6 +19,8 @@ type Storage interface {
 
 	ListObjects(bucket, prefix string) (*ObjectList, error)
 	ListObjectsNext(bucket, prefix, token string) (*ObjectList, error)
+
+	Download(object Object, destination string) error
 }
 
 func NewStorage(cloud Cloud) Storage {

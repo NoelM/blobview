@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"github.com/nsf/termbox-go"
+	"os"
 	"path"
 	"strings"
 	"time"
@@ -11,12 +12,20 @@ import (
 type ObjectListView struct {
 	listCursor    Cursor
 	headerCursor  Cursor
+	footerCursor  Cursor
 	width, height int
 	maxKeySize    int
 	columnFormat  string
 
 	client     Storage
 	objectList *ObjectList
+	footerChan chan DownloadObject
+}
+
+type DownloadObject struct {
+	Object
+	dest string
+	err  error
 }
 
 func NewObjectListView() *ObjectListView {
@@ -27,7 +36,11 @@ func NewObjectListView() *ObjectListView {
 		},
 		listCursor: Cursor{
 			xOrigin: 1,
-			yOrigin: 3,
+			yOrigin: 2,
+		},
+		footerCursor: Cursor{
+			xOrigin: 1,
+			yOrigin: -1, // last line
 		},
 		client: NewStorage(AWS),
 	}
@@ -40,8 +53,16 @@ func (v *ObjectListView) Start() (err error) {
 	v.headerCursor.Reset()
 
 	v.listCursor.xSize = v.width - 2
-	v.listCursor.ySize = v.height - 3
+	v.listCursor.ySize = v.height - 2 - 1
 	v.listCursor.Reset()
+
+	v.footerCursor.xSize = v.width - 2
+	v.footerCursor.ySize = 1
+	v.footerCursor.Sync(v.width, v.height)
+	v.footerCursor.Reset()
+
+	v.footerChan = make(chan DownloadObject, 1)
+	go v.footerRoutine(v.footerChan)
 
 	if err = v.client.Start(); err != nil {
 		return err
@@ -54,6 +75,29 @@ func (v *ObjectListView) Start() (err error) {
 
 	v.printObjectList()
 	return nil
+}
+
+func (v *ObjectListView) Download() {
+	active := v.objectList.GetActiveObject()
+	dObject := DownloadObject{
+		Object: active,
+	}
+
+	var destination string
+	if active.Type == FileType {
+		dir := os.Getenv("HOME")
+		if dir == "" {
+			dir = os.TempDir()
+		}
+		destination = path.Join(dir, active.PrintKey)
+	}
+
+	dObject.dest = destination
+	if active.Type == FileType {
+		dObject.err = v.client.Download(active, destination)
+	}
+
+	v.footerChan <- dObject
 }
 
 func (v *ObjectListView) Dive() {
@@ -123,8 +167,12 @@ func (v *ObjectListView) Reset() {
 func (v *ObjectListView) printObjectList() {
 	v.headerCursor.Reset()
 	v.printHeaders()
+	v.printFooter()
 
 	for _, obj := range v.objectList.List {
+		if v.listCursor.IsBottom() {
+			break
+		}
 		v.printObject(obj)
 	}
 
@@ -259,7 +307,7 @@ func (v *ObjectListView) printColumnHeaders() {
 
 	v.columnFormat = fmt.Sprintf("%%-2s %%-%ds %%-24s %%-5s", maxNameSize)
 
-	line := fmt.Sprintf(v.columnFormat, "", "NAME", "DATE", "SIZE")
+	line := fmt.Sprintf(v.columnFormat, "\U0001F9ED", "NAME", "DATE", "SIZE")
 	v.headerCursor.LineOrigin()
 
 	n := TBPrintMsg(v.headerCursor.x, v.headerCursor.y, termbox.ColorWhite, termbox.ColorBlue, line)
@@ -268,5 +316,57 @@ func (v *ObjectListView) printColumnHeaders() {
 	for !v.headerCursor.IsRight() {
 		termbox.SetBg(v.headerCursor.x, v.headerCursor.y, termbox.ColorBlue)
 		v.headerCursor.Right()
+	}
+}
+
+func (v *ObjectListView) printFooter() {
+
+	line := "(ESC) Quit, (ENTER) Dive, (BKSP) Back, (d) Download"
+
+	v.footerCursor.Reset()
+	clearLine(&v.footerCursor, termbox.ColorWhite, termbox.ColorBlue)
+
+	v.footerCursor.LineOrigin()
+	n := TBPrintMsg(v.footerCursor.x, v.footerCursor.y, termbox.ColorWhite, termbox.ColorBlue, line)
+	v.footerCursor.MoveRight(n)
+
+	for !v.footerCursor.IsRight() {
+		termbox.SetBg(v.footerCursor.x, v.footerCursor.y, termbox.ColorBlue)
+		v.footerCursor.Right()
+	}
+	termbox.Flush()
+}
+
+func (v *ObjectListView) footerRoutine(c chan DownloadObject) {
+
+	bg := termbox.ColorBlue
+	for {
+		obj := <-c
+		var line string
+		if obj.err != nil {
+			line = fmt.Sprintf("[ERROR] Unable to download: %s", obj.err.Error())
+			bg = termbox.ColorRed
+		} else if obj.Type != FileType {
+			line = fmt.Sprintf("[ERROR] Cannot download directory or bucket: %s", printPath(obj.Object))
+			bg = termbox.ColorRed
+		} else {
+			line = fmt.Sprintf("Downloads: %s to %s", printPath(obj.Object), obj.dest)
+		}
+
+		v.footerCursor.Reset()
+		clearLine(&v.footerCursor, termbox.ColorWhite, bg)
+
+		v.footerCursor.LineOrigin()
+		n := TBPrintMsg(v.footerCursor.x, v.footerCursor.y, termbox.ColorWhite, bg, line)
+		v.footerCursor.MoveRight(n)
+
+		for !v.footerCursor.IsRight() {
+			termbox.SetBg(v.footerCursor.x, v.footerCursor.y, bg)
+			v.footerCursor.Right()
+		}
+		termbox.Flush()
+
+		time.Sleep(10 * time.Second)
+		v.printFooter()
 	}
 }

@@ -4,6 +4,7 @@ type Cursor struct {
 	x, y             int
 	xOrigin, yOrigin int
 	xSize, ySize     int
+	width, height    int
 }
 
 func (c *Cursor) IsTop() bool {
@@ -77,6 +78,19 @@ func (c *Cursor) PrevLine() {
 	c.y--
 }
 
+func (c *Cursor) Sync(width, height int) {
+	c.width, c.height = width, height
+}
+
 func (c *Cursor) Reset() {
-	c.x, c.y = c.xOrigin, c.yOrigin
+	x, y := c.xOrigin, c.yOrigin
+
+	if c.xOrigin < 0 {
+		x = c.width - 1 + c.xOrigin
+	}
+	if c.yOrigin < 0 {
+		y = c.height - 1 + c.yOrigin
+	}
+
+	c.x, c.y = x, y
 }

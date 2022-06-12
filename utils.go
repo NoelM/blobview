@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"github.com/mattn/go-runewidth"
 	"github.com/nsf/termbox-go"
 )
@@ -27,4 +28,16 @@ func IntMax(i, j int) int {
 		return i
 	}
 	return j
+}
+
+func printPath(obj Object) string {
+	return fmt.Sprintf("%s://%s", Protocol[obj.Provider], obj.Key)
+}
+
+func clearLine(c *Cursor, fg, bg termbox.Attribute) {
+	c.LineOrigin()
+	for !c.IsRight() {
+		termbox.SetCell(c.x, c.y, ' ', fg, bg)
+		c.Right()
+	}
 }
