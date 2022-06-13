@@ -27,20 +27,43 @@ func main() {
 
 	for {
 		ev := <-eventQueue
-		switch {
-		case ev.Key == termbox.KeyArrowUp:
-			view.Up()
-		case ev.Key == termbox.KeyArrowDown:
-			view.Down()
-		case ev.Key == termbox.KeyEnter:
-			view.Dive()
-		case ev.Key == termbox.KeyBackspace2:
-			view.Back()
-		case ev.Ch == 'd':
-			view.Download()
-		case ev.Key == termbox.KeyEsc:
-			termbox.Close()
-			os.Exit(0)
+		switch ev.Type {
+		case termbox.EventKey:
+			ch := ev.Ch
+			// handle characters first, see termbox.Event
+			if ch != 0 {
+				switch ch {
+				case 'd':
+					view.Download()
+				case 'j':
+					view.Down()
+				case 'k':
+					view.Up()
+				case 'h':
+					view.Back()
+				case 'l':
+					view.Dive()
+				case 'q':
+					termbox.Close()
+					os.Exit(0)
+				}
+			}
+
+			key := ev.Key
+			switch key {
+			case termbox.KeyArrowUp:
+				view.Up()
+			case termbox.KeyArrowDown:
+				view.Down()
+			case termbox.KeyEnter:
+				view.Dive()
+			case termbox.KeyBackspace2:
+				view.Back()
+			case termbox.KeyEsc:
+				termbox.Close()
+				os.Exit(0)
+			}
 		}
+
 	}
 }
