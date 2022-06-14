@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"github.com/nsf/termbox-go"
 	"log"
-	"os"
 )
 
 func main() {
@@ -25,45 +24,14 @@ func main() {
 		}
 	}()
 
+	actionsMap := NewViewActionMap()
 	for {
 		ev := <-eventQueue
-		switch ev.Type {
-		case termbox.EventKey:
-			ch := ev.Ch
-			// handle characters first, see termbox.Event
-			if ch != 0 {
-				switch ch {
-				case 'd':
-					view.Download()
-				case 'j':
-					view.Down()
-				case 'k':
-					view.Up()
-				case 'h':
-					view.Back()
-				case 'l':
-					view.Dive()
-				case 'q':
-					termbox.Close()
-					os.Exit(0)
-				}
-			}
+		// reset n-bytes of event to have map access works
+		ev.N = 0
 
-			key := ev.Key
-			switch key {
-			case termbox.KeyArrowUp:
-				view.Up()
-			case termbox.KeyArrowDown:
-				view.Down()
-			case termbox.KeyEnter:
-				view.Dive()
-			case termbox.KeyBackspace2:
-				view.Back()
-			case termbox.KeyEsc:
-				termbox.Close()
-				os.Exit(0)
-			}
+		if action, ok := actionsMap[ev]; ok {
+			action.cb(view)
 		}
-
 	}
 }
