@@ -11,6 +11,38 @@ type ViewAction struct {
 	cb            func(view *ObjectListView)
 }
 
+type EventHandler struct {
+	eventQueue   chan termbox.Event
+	event2Action map[termbox.Event]ViewAction
+	view         *ObjectListView
+}
+
+func (EH *EventHandler) RegisterAction(action ViewAction) {
+	for _, ev := range action.triggerEvents {
+		if _, ok := EH.event2Action[ev]; ok {
+			panic("event already linked to another action")
+		}
+		EH.event2Action[ev] = action
+	}
+}
+
+func NewEventHandler(ev chan termbox.Event, view *ObjectListView) *EventHandler {
+	m := make(map[termbox.Event]ViewAction)
+	return &EventHandler{eventQueue: ev, event2Action: m, view: view}
+}
+
+func (EH *EventHandler) Start() {
+	for {
+		ev := <-EH.eventQueue
+		// reset n-bytes of event to have map access works
+		ev.N = 0
+
+		if action, ok := EH.event2Action[ev]; ok {
+			action.cb(EH.view)
+		}
+	}
+}
+
 func NewChEvent(ch rune) termbox.Event {
 	return termbox.Event{
 		Type: termbox.EventKey,
