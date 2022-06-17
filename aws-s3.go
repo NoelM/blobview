@@ -23,7 +23,7 @@ func NewAWSS3Driver() *AWSS3Driver {
 }
 
 func (a *AWSS3Driver) Start() error {
-	cfg, err := config.LoadDefaultConfig(context.TODO())
+	cfg, err := config.LoadDefaultConfig(context.TODO(), config.WithDefaultRegion("us-east-1"))
 	if err != nil {
 		return err
 	}
