@@ -86,10 +86,10 @@ func (c *Cursor) Reset() {
 	x, y := c.xOrigin, c.yOrigin
 
 	if c.xOrigin < 0 {
-		x = c.width - 1 + c.xOrigin
+		x = c.width + c.xOrigin
 	}
 	if c.yOrigin < 0 {
-		y = c.height - 1 + c.yOrigin
+		y = c.height + c.yOrigin
 	}
 
 	c.x, c.y = x, y

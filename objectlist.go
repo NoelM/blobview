@@ -31,23 +31,27 @@ type ObjectList struct {
 	List []Object
 }
 
-func (o *ObjectList) FirstActive() bool {
+func (o *ObjectList) SetActive(id int) {
+	o.Active = id
+}
+
+func (o *ObjectList) IsFirstActive() bool {
 	return o.Active == 0
 }
 
 func (o *ObjectList) ActiveUp() {
-	if o.FirstActive() {
+	if o.IsFirstActive() {
 		return
 	}
 	o.Active--
 }
 
-func (o *ObjectList) LastActive() bool {
+func (o *ObjectList) IsLastActive() bool {
 	return o.Active == len(o.List)-1
 }
 
 func (o *ObjectList) ActiveDown() {
-	if o.LastActive() {
+	if o.IsLastActive() {
 		return
 	}
 	o.Active++
@@ -55,4 +59,12 @@ func (o *ObjectList) ActiveDown() {
 
 func (o *ObjectList) GetActiveObject() Object {
 	return o.List[o.Active]
+}
+
+func (o *ObjectList) HasPrevious() bool {
+	return !o.IsFirstActive()
+}
+
+func (o *ObjectList) HasNext() bool {
+	return !o.IsLastActive() || len(o.Token) != 0
 }

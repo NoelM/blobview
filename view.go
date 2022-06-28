@@ -16,6 +16,7 @@ type ObjectListView struct {
 	width, height int
 	maxKeySize    int
 	columnFormat  string
+	page          int
 
 	client     Storage
 	objectList *ObjectList
@@ -169,15 +170,19 @@ func (v *ObjectListView) printObjectList() {
 	v.printHeaders()
 	v.printFooter()
 
-	for _, obj := range v.objectList.List {
+	startID := v.page * v.listCursor.ySize
+	v.objectList.SetActive(startID)
+
+	for _, obj := range v.objectList.List[startID:] {
+		v.printObject(obj)
 		if v.listCursor.IsBottom() {
 			break
 		}
-		v.printObject(obj)
+		v.listCursor.NextLine()
 	}
 
 	v.listCursor.Reset()
-	v.setActiveLine()
+	v.setLineActiveColor()
 
 	termbox.Flush()
 }
@@ -191,7 +196,6 @@ func (v *ObjectListView) printObject(obj Object) {
 	case FileType:
 		v.printFileLine(obj)
 	}
-	v.listCursor.NextLine()
 }
 
 func (v *ObjectListView) printBucketLine(obj Object) {
@@ -218,7 +222,7 @@ func (v *ObjectListView) printFileLine(obj Object) {
 	TBPrintMsg(v.listCursor.x, v.listCursor.y, termbox.ColorWhite, termbox.ColorDefault, line)
 }
 
-func (v *ObjectListView) setActiveLine() {
+func (v *ObjectListView) setLineActiveColor() {
 	v.listCursor.LineOrigin()
 
 	for !v.listCursor.IsRight() {
@@ -229,7 +233,7 @@ func (v *ObjectListView) setActiveLine() {
 	}
 }
 
-func (v *ObjectListView) setDefaultLine() {
+func (v *ObjectListView) setLineDefaultColor() {
 	v.listCursor.LineOrigin()
 
 	for !v.listCursor.IsRight() {
@@ -241,27 +245,49 @@ func (v *ObjectListView) setDefaultLine() {
 }
 
 func (v *ObjectListView) Up() {
-	v.objectList.ActiveUp()
-
-	if v.listCursor.IsTop() {
+	// Already at the top of the list
+	if v.objectList.IsFirstActive() {
 		return
 	}
-	v.setDefaultLine()
-	v.listCursor.Up()
-	v.setActiveLine()
+
+	if v.listCursor.IsTop() && v.objectList.HasPrevious() {
+		v.page--
+		v.Reset()
+		v.printObjectList()
+	} else if !v.listCursor.IsTop() {
+		// Somewhere in the screen, just move to the previous line
+		v.objectList.ActiveUp()
+
+		v.setLineDefaultColor()
+		v.listCursor.Up()
+		v.setLineActiveColor()
+	} else {
+		return
+	}
 
 	termbox.Flush()
 }
 
 func (v *ObjectListView) Down() {
-	v.objectList.ActiveDown()
-
-	if v.listCursor.IsBottom() {
+	// Already at the bottom of the list
+	if v.objectList.IsLastActive() {
 		return
 	}
-	v.setDefaultLine()
-	v.listCursor.Down()
-	v.setActiveLine()
+
+	if v.listCursor.IsBottom() && v.objectList.HasNext() {
+		v.page++
+		v.Reset()
+		v.printObjectList()
+	} else if !v.listCursor.IsBottom() {
+		// Somewhere in the screen, just move to the next line
+		v.objectList.ActiveDown()
+
+		v.setLineDefaultColor()
+		v.listCursor.Down()
+		v.setLineActiveColor()
+	} else {
+		return
+	}
 
 	termbox.Flush()
 }
